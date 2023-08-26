@@ -50,20 +50,8 @@ class _HistoryWidgetState extends State<HistoryWidget> {
                                 size: 40,
                                 color: Color(0xff0000FF),
                               ),
-                        Column(
-                          children: [
-                            Text(
-                              operation.sender,
-                              style: StyleLibrary.text.black16,
-                            ),
-                            Text(
-                              operation.time,
-                              style: StyleLibrary.text.black16,
-                            )
-                          ],
-                        ),
                         Text(
-                          "${operation.type_operation == 0 ? "-" : "+"} ${operation.operating} ${operation.currency}",
+                          "${operation.type_operation == 0 ? "-" : "+"} ${operation.value} ${operation.type_operation}",
                           style: StyleLibrary.text.black16,
                         )
                       ],

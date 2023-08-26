@@ -4,13 +4,16 @@ import 'package:hackathon2023_fitcha/data/wallet.dart';
 import 'package:hackathon2023_fitcha/features/wallet_page/wallet_page.dart';
 import 'package:hackathon2023_fitcha/style/style_library.dart';
 
+import '../../data/cards.dart';
 import '../fill_up_page/fill_up_page.dart';
 
 class WalletWidget extends StatelessWidget {
+  final String email;
   final Wallet card;
   final Currencies? currencies;
+  final List<Cards> cards;
 
-  WalletWidget(this.card, this.currencies);
+  WalletWidget(this.card, this.currencies, this.email, this.cards, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +21,7 @@ class WalletWidget extends StatelessWidget {
       onTap: () => {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => WalletPage(wallet: card, currencies: currencies,)),
+          MaterialPageRoute(builder: (context) => WalletPage(wallet: card, currencies: currencies,email: email, cards: cards)),
         )
       },
       child: Container(

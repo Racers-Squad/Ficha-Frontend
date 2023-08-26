@@ -4,17 +4,18 @@ import 'dart:convert';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hackathon2023_fitcha/data/card_provider.dart';
 import 'package:hackathon2023_fitcha/data/currencies.dart';
+import 'package:hackathon2023_fitcha/data/operation.dart';
 import 'package:hackathon2023_fitcha/data/wallet_provider.dart';
 import 'package:hackathon2023_fitcha/features/change_money_page/change_money_page.dart';
-import 'package:hackathon2023_fitcha/features/elements/history_widget.dart';
 import 'package:hackathon2023_fitcha/services/const.dart';
 import 'package:hackathon2023_fitcha/services/storage.dart';
 import 'package:hackathon2023_fitcha/style/style_library.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:provider/provider.dart';
 
-import '../../data/operation.dart';
+import '../../data/cards.dart';
 import '../../data/wallet.dart';
 import '../add_wallet_page/add_wallet_page.dart';
 import '../elements/wallet_widget.dart';
@@ -27,46 +28,14 @@ class CardsPage extends StatefulWidget {
   State<CardsPage> createState() => _CardsPageState();
 }
 
-List<List<Operation>> histories = [
-  [
-    Operation(1, 10, 100, 0, 15, "RUB", "10.12.23 17:00", "Frank"),
-    Operation(1, 20, 100, 1, 25, "USD", "10.12.23 17:20", "Frank"),
-    Operation(1, 25, 500, 1, 35, "USDT", "10.12.23 17:50", "Frank"),
-    Operation(1, 10, 700, 0, 15, "KZ", "10.12.23 18:20", "Frank"),
-    Operation(1, 25, 500, 1, 35, "USDT", "10.12.23 17:50", "Frank"),
-    Operation(1, 10, 700, 0, 15, "KZ", "10.12.23 18:20", "Frank"),
-    Operation(1, 25, 500, 1, 35, "USDT", "10.12.23 17:50", "Frank"),
-    Operation(1, 10, 700, 0, 15, "KZ", "10.12.23 18:20", "Frank"),
-    Operation(1, 25, 500, 1, 35, "USDT", "10.12.23 17:50", "Frank")
-  ],
-  [
-    Operation(1, 10, 700, 0, 15, "KZ", "10.12.23 18:20", "Frank"),
-    Operation(1, 25, 500, 1, 35, "USDT", "10.12.23 17:50", "Frank"),
-    Operation(1, 10, 700, 0, 15, "KZ", "10.12.23 18:20", "Frank"),
-    Operation(1, 25, 500, 1, 35, "USDT", "10.12.23 17:50", "Frank"),
-    Operation(1, 10, 700, 0, 15, "KZ", "10.12.23 18:20", "Frank"),
-    Operation(1, 25, 500, 1, 35, "USDT", "10.12.23 17:50", "Frank"),
-    Operation(1, 10, 700, 0, 15, "KZ", "10.12.23 18:20", "Frank"),
-    Operation(1, 20, 10000, 1, 40, "KS", "10.12.23 20:27", "Frank")
-  ],
-  [
-    Operation(1, 10, 700, 0, 15, "KZ", "10.12.23 18:20", "Frank"),
-    Operation(1, 25, 500, 1, 35, "USDT", "10.12.23 17:50", "Frank"),
-    Operation(1, 10, 700, 0, 15, "KZ", "10.12.23 18:20", "Frank"),
-    Operation(1, 25, 500, 1, 35, "USDT", "10.12.23 17:50", "Frank"),
-    Operation(1, 10, 700, 0, 15, "KZ", "10.12.23 18:20", "Frank"),
-    Operation(1, 25, 500, 1, 35, "USDT", "10.12.23 17:50", "Frank"),
-    Operation(1, 10, 700, 0, 15, "KZ", "10.12.23 18:20", "Frank"),
-    Operation(1, 20, 10000, 1, 40, "KS", "10.12.23 20:27", "Frank")
-  ]
-];
-
 class _CardsPageState extends State<CardsPage> {
   int currentWalletIndex = 0;
   String email = '';
   List<Currencies> banks = [];
+  List<Cards> cards = [];
   List<Wallet> wallets = [];
   bool isLoading = true;
+  List<Operation> history = [];
 
   Future<String?> getTokenFromSecureStorage() async {
     final storage = SecureStorage();
@@ -76,6 +45,19 @@ class _CardsPageState extends State<CardsPage> {
 
   Map<String, dynamic> decodeToken(String token) {
     return JwtDecoder.decode(token);
+  }
+
+  void getHistory() async {
+    final url = 'http://${Const.ipurl}:8080/api/wallets/$email/history';
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      final jsonData = json.decode(response.body);
+
+      for (final hist in jsonData) {
+        history.add(Operation.fromJson(hist));
+      }
+      print(history);
+    }
   }
 
   Future<void> getAllWallets(String email) async {
@@ -89,7 +71,19 @@ class _CardsPageState extends State<CardsPage> {
         wallets.add(Wallet.fromJson(wallet));
       }
     }
+    final url1 = 'http://${Const.ipurl}:8080/api/cards/$email';
+    final response1 = await http.get(Uri.parse(url1));
+    List<Cards> cardses = [];
+    if (response.statusCode == 200) {
+      final jsonData = json.decode(response1.body);
+      for (final card in jsonData) {
+        setState(() {
+          cardses.add(Cards.fromJson(card));
+        });
+      }
+    }
     Provider.of<WalletProvider>(context, listen: false).setWallets(wallets);
+    Provider.of<CardsProvider>(context, listen: false).setCards(cardses);
   }
 
   Future<void> initialization() async {
@@ -107,6 +101,7 @@ class _CardsPageState extends State<CardsPage> {
 
   Future<void> initialize() async {
     initialization();
+    getHistory();
     final token = await getTokenFromSecureStorage();
     if (token != null) {
       setState(() {
@@ -126,7 +121,12 @@ class _CardsPageState extends State<CardsPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     setState(() {
-      wallets = Provider.of<WalletProvider>(context).getWallet;
+      wallets = Provider
+          .of<WalletProvider>(context)
+          .getWallet;
+      cards = Provider
+          .of<CardsProvider>(context)
+          .getCards;
     });
     const duration = Duration(milliseconds: 250);
     Timer(duration, () {
@@ -134,6 +134,10 @@ class _CardsPageState extends State<CardsPage> {
         isLoading = false;
       });
     });
+  }
+
+  List<Cards> getCardsByWalletId(int id) {
+    return cards.where((element) => element.wallet_id == id).toList();
   }
 
   void copyToClipboard() {
@@ -153,54 +157,58 @@ class _CardsPageState extends State<CardsPage> {
         child: Column(
           children: [
             isLoading
-                ? CircularProgressIndicator()
+                ? const CircularProgressIndicator()
                 : Container(
-                    margin: const EdgeInsets.only(top: 20),
-                    child: CarouselSlider.builder(
-                      itemCount: wallets.length + 1,
-                      itemBuilder:
-                          (BuildContext context, int index, int realIndex) {
-                        if (index < wallets.length && wallets != []) {
-                          return WalletWidget(wallets[index],
-                              getCurrenciesById(wallets[index].currency));
-                        } else {
-                          return Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.grey,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: IconButton(
-                                icon: const Icon(
-                                  Icons.add_circle_outline,
-                                ),
-                                iconSize: 100,
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => AddWalletPage(
-                                            email: email, banks: banks)),
-                                  );
-                                },
-                              ));
-                        }
-                      },
-                      options: CarouselOptions(
-                        onPageChanged: (index, reason) {
-                          setState(() {
-                            currentWalletIndex = index;
-                          });
-                        },
-                        height: 250,
-                        enableInfiniteScroll: false,
-                        viewportFraction: 0.8,
-                        initialPage: 0,
-                        enlargeCenterPage: true,
-                      ),
-                    ),
-                  ),
+              margin: const EdgeInsets.only(top: 25),
+              child: CarouselSlider.builder(
+                itemCount: wallets.length + 1,
+                itemBuilder:
+                    (BuildContext context, int index, int realIndex) {
+                  if (index < wallets.length && wallets != []) {
+                    return WalletWidget(
+                        wallets[index],
+                        getCurrenciesById(wallets[index].currency),
+                        email,
+                        getCardsByWalletId(wallets[index].id));
+                  } else {
+                    return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.grey,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.add_circle_outline,
+                          ),
+                          iconSize: 100,
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      AddWalletPage(
+                                          email: email, banks: banks)),
+                            );
+                          },
+                        ));
+                  }
+                },
+                options: CarouselOptions(
+                  onPageChanged: (index, reason) {
+                    setState(() {
+                      currentWalletIndex = index;
+                    });
+                  },
+                  height: 250,
+                  enableInfiniteScroll: false,
+                  viewportFraction: 0.8,
+                  initialPage: 0,
+                  enlargeCenterPage: true,
+                ),
+              ),
+            ),
             if (currentWalletIndex != wallets.length)
               Container(
                 margin: const EdgeInsets.only(top: 35),
@@ -214,9 +222,10 @@ class _CardsPageState extends State<CardsPage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => ChangeMoneyPage(
-                                  values: banks,
-                                ),
+                                builder: (context) =>
+                                    ChangeMoneyPage(
+                                      values: banks,
+                                    ),
                               ),
                             );
                           },
@@ -278,10 +287,10 @@ class _CardsPageState extends State<CardsPage> {
                           style: StyleLibrary.text.black20,
                         ),
                       ),
-                      HistoryWidget(
-                          history: histories.length > currentWalletIndex
-                              ? histories[currentWalletIndex]
-                              : [])
+                      // HistoryWidget(
+                      //     history: histories.length > currentWalletIndex
+                      //         ? histories[currentWalletIndex]
+                      //         : [])
                     ],
                   ),
                 ),

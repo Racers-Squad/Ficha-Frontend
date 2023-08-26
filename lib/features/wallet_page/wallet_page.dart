@@ -1,17 +1,30 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:hackathon2023_fitcha/data/currencies.dart';
 import 'package:ionicons/ionicons.dart';
+import 'package:http/http.dart' as http;
 
+import '../../data/bank.dart';
 import '../../data/wallet.dart';
+import '../../services/const.dart';
 import '../../style/style_library.dart';
 import '../../data/cards.dart';
 import '../elements/cards_list.dart';
+import '../elements/modal_bottom_sheet.dart';
 
 class WalletPage extends StatefulWidget {
+  final String email;
   final Wallet wallet;
   final Currencies? currencies;
+  final List<Cards> cards;
 
-  const WalletPage({super.key, required this.wallet, required this.currencies});
+  const WalletPage(
+      {super.key,
+      required this.email,
+      required this.wallet,
+      required this.currencies,
+      required this.cards});
 
   @override
   State<WalletPage> createState() => _WalletPageState();
@@ -19,66 +32,41 @@ class WalletPage extends StatefulWidget {
 
 class _WalletPageState extends State<WalletPage> {
   final formKey = GlobalKey<FormState>();
+  List<Bank> banks = [];
+  late Bank selectedBank;
 
   void _openModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Выберите банк в котором вы хотите открыть карту',
-                style: StyleLibrary.text.black20,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20.0),
-              SizedBox(
-                width: 250,
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  items: <String>['Option 1', 'Option 2', 'Option 3']
-                      .map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) => {},
-                  hint: const Text('Выберите банк'),
-                ),
-              ),
-              const SizedBox(height: 20.0),
-              ElevatedButton(
-                style: StyleLibrary.button.orangeButton,
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: Container(
-                    padding: const EdgeInsets.all(10),
-                    child: const Text('Создать')),
-              ),
-            ],
-          ),
+        return ModalBottomSheetWidget(
+          email: widget.email,
+          wallet: widget.wallet,
+          banks: banks,
         );
       },
     );
   }
 
-  List<Cards> cards = [
-    Cards(1, 101, 201, 1234567890123456, DateTime(2023, 12, 31), 800, 301),
-    Cards(2, 102, 202, 9876543210987654, DateTime(2024, 6, 30), 750, 302),
-    Cards(3, 103, 203, 1111222233334444, DateTime(2025, 3, 15), 850, 303),
-    Cards(4, 104, 204, 5555666677778888, DateTime(2026, 8, 20), 720, 304),
-    Cards(5, 105, 205, 4444333322221111, DateTime(2027, 2, 28), 700, 305),
-    Cards(6, 106, 206, 6666777788889999, DateTime(2028, 9, 10), 780, 306),
-    Cards(7, 107, 207, 8888999900001111, DateTime(2029, 11, 5), 820, 307),
-    Cards(8, 108, 208, 2222111133334444, DateTime(2030, 4, 25), 760, 308),
-    Cards(9, 109, 209, 7777666655554444, DateTime(2031, 7, 8), 790, 309),
-    Cards(10, 110, 210, 9999888877776666, DateTime(2032, 1, 12), 830, 310),
-  ];
+  void init() async {
+    var queryParams = {'currency_id': widget.wallet.currency.toString()};
+    final uri = Uri.parse('http://${Const.ipurl}:8080/api/banks/all')
+        .replace(queryParameters: queryParams);
+    final response = await http.get(uri);
+    final jsonData = json.decode(response.body);
+    for (final bank in jsonData) {
+      banks.add(Bank.fromJson(bank));
+    }
+    setState(() {
+      selectedBank = banks.first;
+    });
+  }
+
+  @override
+  void initState() {
+    init();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +82,7 @@ class _WalletPageState extends State<WalletPage> {
                   IconButton(
                     icon: const Icon(
                       Ionicons.chevron_back,
-                      color: Colors.black,
+                      color: Colors.white,
                     ),
                     onPressed: () {
                       Navigator.pop(context);
@@ -102,7 +90,7 @@ class _WalletPageState extends State<WalletPage> {
                   ),
                   Text(
                     'Добавление кошелька',
-                    style: StyleLibrary.text.black20,
+                    style: StyleLibrary.text.white20,
                   ),
                 ],
               ),
@@ -117,6 +105,13 @@ class _WalletPageState extends State<WalletPage> {
                 padding: const EdgeInsets.all(30),
                 child: Column(
                   children: [
+                    Container(
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Баланс: ${widget.wallet.score}',
+                        style: StyleLibrary.text.black20,
+                      ),
+                    ),
                     Container(
                       margin: const EdgeInsets.all(15),
                       child: ElevatedButton(
@@ -147,7 +142,8 @@ class _WalletPageState extends State<WalletPage> {
                       ),
                     ),
                     CardsList(
-                      cards: cards,
+                      cards: widget.cards,
+                      balance: widget.wallet.score,wallet: widget.wallet,
                     ),
                   ],
                 ),

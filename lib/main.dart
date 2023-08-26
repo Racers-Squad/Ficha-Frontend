@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hackathon2023_fitcha/data/card_provider.dart';
 import 'package:hackathon2023_fitcha/data/wallet_provider.dart';
 import 'package:hackathon2023_fitcha/features/login_page/login_page.dart';
 import 'package:hackathon2023_fitcha/features/main_page/main_page.dart';
@@ -19,6 +20,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => WalletProvider()),
+        ChangeNotifierProvider(create: (_) => CardsProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
